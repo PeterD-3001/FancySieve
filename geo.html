@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <title>Geo Tracker</title>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <style>
+            body {
+                font-family: sans-serif;
+            }
+
+            #log div {
+                padding: 0.5rem;
+                font-size: 1rem;
+                margin: 0.25rem;
+            }
+
+            #log .info {
+                background-color: rgb(128, 128, 255);
+            }
+
+            #log .error {
+                background-color: rgb(255, 128, 128);
+            }
+
+            #clear {
+                width: 5rem;
+                height: 5rem;
+            }
+
+            textarea {
+                width: 100%;
+                height: 50rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Geo Tracker</h1>
+        <input type="button" value="Clear" id="clear"/>
+        <input type="button" value="Retrieve" id="retrieve"/>
+        <audio id="audio" controls="controls" style="display: none">
+            <source src="blip.ogg"/>
+        </audio>
+        <div id="log"></div>
+        <script>
+            window.onload = function() {
+                var clearButton = document.getElementById("clear");
+                clearButton.onclick = clear;
+
+                var retrieveButton = document.getElementById("retrieve");
+                retrieveButton.onclick = retrieve;
+
+
+                navigator.geolocation.watchPosition(register, register, {
+                    enableHighAccuracy: true
+                });
+            };
+
+            function logMessage(message, type) {
+                document.getElementById("audio").play();
+                function time(date) {
+                    function padded(r) {
+                        return r < 10 ? "0" + r : r;
+                    }
+                    return padded(date.getHours()) + ":" + padded(date.getMinutes()) + ":" + padded(date.getSeconds());
+                }
+
+                var log = document.getElementById("log");
+                if (log.childNodes.length >= 10) {
+                    log.removeChild(log.childNodes[log.childNodes.length - 1]);
+                }
+                var div = document.createElement("div");
+                div.innerHTML = time(new Date()) + " " + message;
+                div.setAttribute("class", type);
+                if(log.childNodes.length == 0) {
+                    log.appendChild(div);
+                } else {
+                    log.insertBefore(div, log.childNodes[0]);
+                }
+            }
+
+            function register(position) {
+                var track = localStorage.getItem("track");
+                if(!track) {
+                    console.log("Initialize track");
+                    track = [];
+                } else {
+                    track = JSON.parse(track);
+                }
+
+                var datum = {
+                    time: new Date().getTime(),
+                    code: position.code,
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    altitude: position.coords.altitude,
+                    accuracy: position.coords.accuracy,
+                    altitudeAccuracy: position.coords.altitudeAccuracy,
+                    heading: position.coords.heading,
+                };
+
+                track.push(datum);
+                localStorage.setItem("track", JSON.stringify(track));
+
+                logMessage('Entrty: ' + JSON.stringify(datum) + ' (size: ' + track.length + ')', position.code === undefined ? "info" : "error");
+            }
+
+            function clear() {
+                localStorage.removeItem("track");
+                logMessage("Clearing track record", "info");
+            }
+
+            function retrieve() {
+                var textarea = document.createElement("textarea");
+                textarea.value = localStorage.getItem("track");
+                document.body.appendChild(textarea);
+            }
+        </script>
+    </body>
+</html>
